@@ -2,5 +2,5 @@
 
 ## Collaborators
 
-Michael States
+Michael States<br>
 Aditya Bidwai

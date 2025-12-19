@@ -1,0 +1,71 @@
+clear;
+clc;
+close all;
+% constants
+L = 0.5;
+dT = 0.1;
+N_steps = 1000;
+T_final = N_steps * dT;
+time = 0: dT : T_final; % create timesteps to feed to ode45
+% nominal point for linearization
+x_nom_0 = [10; 0; pi/2; -60; 0; -pi/2];
+u_nom = [2; -pi/18; 12; pi/25];
+%perturbation vector, we can change this
+dx0 = [0; 1; 0; 0; 0; 0.1];
+x0 = x_nom_0 + dx0; % this is the initial perturbed state
+x_NL_history = zeros(6, N_steps + 1);
+x_NL_history(:, 1) = x0;
+x_nom_history = zeros(6, N_steps + 1);
+x_nom_history(:, 1) = x_nom_0;
+opts = odeset(RelTol=1e-2, AbsTol=1e-5);
+for k = 1:N_steps
+    t_k = time(k);
+    [t, x_NL_out] = ode45(@(t, x) f_nonlinear(t, x, u_nom, L), [t_k, t_k+ dT], x_NL_history(:, k));
+    x_NL_history(:, k+1) = x_NL_out(end, :);
+end
+% Define state labels (if not defined elsewhere)
+state_labels = {'\xi_g (m)', '\eta_g (m)', '\theta_g (rads)', ...
+'\xi_a (m)', '\eta_a (m)', '\theta_a (rads)'};
+% Time vector definition (e.g., assuming dT=0.1 and N_steps=400)
+T_final = 1000 * 0.1;
+time = 0:0.1:T_final;
+%wrap angles
+% x_NL_history(3, :) = wrapToPi(x_NL_history(3, :));
+% x_NL_history(6, :) = wrapToPi(x_NL_history(6, :));
+%% Plotting x_NL_history
+figure('Name', 'States vs. Time, Full Nonlinear Dynamics Simulation');
+sgtitle('State Trajectories from Full Nonlinear Simulation');
+for i = 1:6
+    subplot(6, 1, i); % Create a 3x2 grid of subplots
+    % Plot the i-th state (i-th row) against the time vector
+    plot(time, x_NL_history(i, :), 'b', 'LineWidth', 1.5);
+    grid on;
+    xlabel('Time (s)');
+    ylabel(state_labels{i});
+    title(['State: ', state_labels{i}]);
+end
+% ---- Measurement history ----
+Y_NL_history = zeros(5, N_steps);
+for k = 1:N_steps
+y = h_measure_nl(x_NL_history(:,k+1));
+% y(1) = wrapToPi(y(1));
+% y(3) = wrapToPi(y(3));
+Y_NL_history(:,k) = y;
+end
+% ---- Plot measurements ----
+meas_labels = {
+'\gamma_{ga} (rad)'
+'r_{ga} (m)'
+'\gamma_{ag} (rad)'
+'v_g (m/s)'
+'v_a (m/s)'
+};
+figure('Name','Measurement Outputs vs Time');
+sgtitle('Nonlinear Measurement Outputs');
+for i = 1:5
+subplot(5,1,i);
+plot(time(2:end), Y_NL_history(i,:), 'b', 'LineWidth', 1.5);
+grid on;
+xlabel('Time (s)');
+ylabel(meas_labels{i});
+end
